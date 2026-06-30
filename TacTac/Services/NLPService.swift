@@ -1,12 +1,17 @@
 import Foundation
 import FoundationModels
 
+struct TacExtraction: Equatable {
+    let objectName: String
+    let place: String
+}
+
 @MainActor
 final class NLPService {
     static let shared = NLPService()
     
     // Extract {object, place} from natural language input
-    func extractTac(from input: String) async throws -> (objectName: String, place: String) {
+    func extractTac(from input: String) async throws -> TacExtraction {
         let session = LanguageModelSession()
         
         let prompt = """
@@ -18,22 +23,24 @@ final class NLPService {
         
         Output only JSON, no other text. Format: {"object":"xxx","place":"xxx"}
         
-        User said: \(input)
+        If either value is missing or uncertain, output an empty string for that value.
+
+        User said:
+        \"\"\"
+        \(input)
+        \"\"\"
         """
         
         let response = try await session.respond(to: prompt)
         let text = response.content
         
-        // Parse JSON response
-        guard let data = cleanJSONText(text).data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: String],
-              let object = json["object"],
-              let place = json["place"] else {
-            // Fallback if parsing fails
-            return (objectName: input, place: "unknown location")
+        guard let json = parseJSONObject(from: text),
+              let object = cleanedField(json["object"]),
+              let place = cleanedField(json["place"]) else {
+            throw NLPServiceError.couldNotExtractPlacement
         }
         
-        return (objectName: object, place: place)
+        return TacExtraction(objectName: object, place: place)
     }
 
     // Extract the object the user wants to find from a question.
@@ -46,17 +53,20 @@ final class NLPService {
 
         Output only JSON, no other text. Format: {"object":"xxx"}
 
-        User asked: \(input)
+        If the item is missing or uncertain, output an empty string.
+
+        User asked:
+        \"\"\"
+        \(input)
+        \"\"\"
         """
 
         let response = try await session.respond(to: prompt)
         let text = response.content
 
-        guard let data = cleanJSONText(text).data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: String],
-              let object = json["object"],
-              !object.isEmpty else {
-            return input
+        guard let json = parseJSONObject(from: text),
+              let object = cleanedField(json["object"]) else {
+            throw NLPServiceError.couldNotExtractObject
         }
 
         return object
@@ -90,9 +100,8 @@ final class NLPService {
         let response = try await session.respond(to: prompt)
         let text = response.content
 
-        guard let data = cleanJSONText(text).data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Int],
-              let index = json["index"],
+        guard let json = parseJSONObject(from: text),
+              let index = intField(json["index"]),
               candidates.indices.contains(index) else {
             return nil
         }
@@ -119,13 +128,65 @@ final class NLPService {
         """
         
         let response = try await session.respond(to: prompt)
-        return response.content
+        return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func cleanJSONText(_ text: String) -> String {
-        text
+    private func parseJSONObject(from text: String) -> [String: Any]? {
+        let cleanedText = text
             .replacingOccurrences(of: "```json", with: "")
             .replacingOccurrences(of: "```", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let data = cleanedText.data(using: .utf8) else {
+            return nil
+        }
+
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    }
+
+    private func cleanedField(_ value: Any?) -> String? {
+        guard let string = value as? String else {
+            return nil
+        }
+
+        let cleaned = string.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !cleaned.isEmpty,
+              cleaned.lowercased() != "unknown",
+              cleaned.lowercased() != "uncertain" else {
+            return nil
+        }
+
+        return cleaned
+    }
+
+    private func intField(_ value: Any?) -> Int? {
+        if let int = value as? Int {
+            return int
+        }
+
+        if let double = value as? Double {
+            return Int(double)
+        }
+
+        if let string = value as? String {
+            return Int(string.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+
+        return nil
+    }
+}
+
+enum NLPServiceError: LocalizedError {
+    case couldNotExtractPlacement
+    case couldNotExtractObject
+
+    var errorDescription: String? {
+        switch self {
+        case .couldNotExtractPlacement:
+            return "I could not tell both the item and the place. Please say something like, 'my keys are on the kitchen counter.'"
+        case .couldNotExtractObject:
+            return "I could not tell which item you are looking for."
+        }
     }
 }
