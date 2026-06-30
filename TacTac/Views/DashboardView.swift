@@ -122,7 +122,7 @@ struct MemoryItemRow: View {
             
             Text(item.timeAdded, style: .time)
                 .font(.caption2)
-                .foregroundColor(.tertiary)
+                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 4)
     }
