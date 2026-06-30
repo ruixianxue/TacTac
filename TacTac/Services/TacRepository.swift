@@ -13,6 +13,8 @@ final class TacRepository {
     func save(
         objectName: String,
         place: String,
+        specificPlace: String? = nil,
+        area: String? = nil,
         rawInput: String,
         confidence: Double = 1.0,
         tags: [String] = []
@@ -23,10 +25,12 @@ final class TacRepository {
             throw TacRepositoryError.emptyObjectName
         }
 
-        if let existingTac = try findExactMatch(forNormalizedObjectName: normalizedObjectName) {
+        if let existingTac = try findEquivalentMatch(forNormalizedObjectName: normalizedObjectName) {
             existingTac.updateLocation(
                 objectName: objectName,
                 place: place,
+                specificPlace: specificPlace,
+                area: area,
                 rawInput: rawInput,
                 confidence: confidence,
                 tags: tags
@@ -38,6 +42,8 @@ final class TacRepository {
         let tac = Tac(
             objectName: objectName,
             place: place,
+            specificPlace: specificPlace,
+            area: area,
             rawInput: rawInput,
             confidence: confidence,
             tags: tags
@@ -62,7 +68,6 @@ final class TacRepository {
 
     func findBestLocalMatch(for objectName: String) throws -> Tac? {
         let normalizedQuery = Tac.normalizeObjectName(objectName)
-        let queryTokens = Set(normalizedQuery.split(separator: " ").map(String.init))
 
         guard !normalizedQuery.isEmpty else {
             return nil
@@ -77,12 +82,10 @@ final class TacRepository {
             return exactMatch
         }
 
+        let queryTokens = expandedTokens(for: normalizedQuery)
+
         return records.first { tac in
-            let objectTokens = Set(normalizedName(for: tac).split(separator: " ").map(String.init))
-            let tagTokens = Set(tac.tags.flatMap {
-                Tac.normalizeObjectName($0).split(separator: " ").map(String.init)
-            })
-            let searchableTokens = objectTokens.union(tagTokens)
+            let searchableTokens = searchableTokens(for: tac)
 
             guard !queryTokens.isEmpty, !searchableTokens.isEmpty else {
                 return false
@@ -93,9 +96,13 @@ final class TacRepository {
         }
     }
 
-    private func findExactMatch(forNormalizedObjectName normalizedObjectName: String) throws -> Tac? {
-        try fetchRecent().first { tac in
+    private func findEquivalentMatch(forNormalizedObjectName normalizedObjectName: String) throws -> Tac? {
+        let queryTokens = expandedTokens(for: normalizedObjectName)
+
+        return try fetchRecent().first { tac in
             normalizedName(for: tac) == normalizedObjectName
+                || expandedTokens(for: normalizedName(for: tac)).isSubset(of: queryTokens)
+                || queryTokens.isSubset(of: expandedTokens(for: normalizedName(for: tac)))
         }
     }
 
@@ -105,6 +112,37 @@ final class TacRepository {
         }
 
         return tac.normalizedObjectName
+    }
+
+    private func searchableTokens(for tac: Tac) -> Set<String> {
+        let objectTokens = expandedTokens(for: normalizedName(for: tac))
+        let tagTokens = tac.tags.reduce(into: Set<String>()) { tokens, tag in
+            tokens.formUnion(expandedTokens(for: Tac.normalizeObjectName(tag)))
+        }
+
+        return objectTokens.union(tagTokens)
+    }
+
+    private func expandedTokens(for normalizedValue: String) -> Set<String> {
+        let tokens = normalizedValue.split(separator: " ").map(String.init)
+
+        return tokens.reduce(into: Set<String>()) { result, token in
+            result.formUnion(tokenVariants(for: token))
+        }
+    }
+
+    private func tokenVariants(for token: String) -> Set<String> {
+        var variants: Set<String> = [token]
+
+        if token.hasSuffix("ies"), token.count > 3 {
+            variants.insert(String(token.dropLast(3)) + "y")
+        } else if token.hasSuffix("es"), token.count > 3 {
+            variants.insert(String(token.dropLast(2)))
+        } else if token.hasSuffix("s"), token.count > 3 {
+            variants.insert(String(token.dropLast()))
+        }
+
+        return variants
     }
 }
 

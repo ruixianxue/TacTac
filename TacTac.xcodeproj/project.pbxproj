@@ -6,14 +6,30 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		E40C4A142FF40AB3006719EB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 783D0D152FF2CDE5008F782B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 783D0D1C2FF2CDE5008F782B;
+			remoteInfo = TacTac;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		783D0D1D2FF2CDE5008F782B /* TacTac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TacTac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E40C4A102FF40AB3006719EB /* TacTacTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TacTacTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		783D0D1F2FF2CDE5008F782B /* TacTac */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TacTac;
+			sourceTree = "<group>";
+		};
+		E40C4A112FF40AB3006719EB /* TacTacTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TacTacTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -26,12 +42,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E40C4A0D2FF40AB3006719EB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		783D0D142FF2CDE5008F782B = {
 			isa = PBXGroup;
 			children = (
+				E40C4A112FF40AB3006719EB /* TacTacTests */,
 				783D0D1E2FF2CDE5008F782B /* Products */,
 				783D0D1F2FF2CDE5008F782B /* TacTac */,
 			);
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				783D0D1D2FF2CDE5008F782B /* TacTac.app */,
+				E40C4A102FF40AB3006719EB /* TacTacTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +95,29 @@
 			productReference = 783D0D1D2FF2CDE5008F782B /* TacTac.app */;
 			productType = "com.apple.product-type.application";
 		};
+		E40C4A0F2FF40AB3006719EB /* TacTacTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E40C4A182FF40AB3006719EB /* Build configuration list for PBXNativeTarget "TacTacTests" */;
+			buildPhases = (
+				E40C4A0C2FF40AB3006719EB /* Sources */,
+				E40C4A0D2FF40AB3006719EB /* Frameworks */,
+				E40C4A0E2FF40AB3006719EB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E40C4A152FF40AB3006719EB /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E40C4A112FF40AB3006719EB /* TacTacTests */,
+			);
+			name = TacTacTests;
+			packageProductDependencies = (
+			);
+			productName = TacTacTests;
+			productReference = E40C4A102FF40AB3006719EB /* TacTacTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -77,11 +125,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2650;
+				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					783D0D1C2FF2CDE5008F782B = {
 						CreatedOnToolsVersion = 26.5;
+					};
+					E40C4A0F2FF40AB3006719EB = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = 783D0D1C2FF2CDE5008F782B;
 					};
 				};
 			};
@@ -100,12 +152,20 @@
 			projectRoot = "";
 			targets = (
 				783D0D1C2FF2CDE5008F782B /* TacTac */,
+				E40C4A0F2FF40AB3006719EB /* TacTacTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		783D0D1B2FF2CDE5008F782B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E40C4A0E2FF40AB3006719EB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +182,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E40C4A0C2FF40AB3006719EB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E40C4A152FF40AB3006719EB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 783D0D1C2FF2CDE5008F782B /* TacTac */;
+			targetProxy = E40C4A142FF40AB3006719EB /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		783D0D282FF2CDEB008F782B /* Debug */ = {
@@ -251,6 +326,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7M7F893265;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -283,6 +359,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7M7F893265;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -308,6 +385,50 @@
 			};
 			name = Release;
 		};
+		E40C4A162FF40AB3006719EB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7M7F893265;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = TacTac.TacTacTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TacTac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TacTac";
+			};
+			name = Debug;
+		};
+		E40C4A172FF40AB3006719EB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7M7F893265;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = TacTac.TacTacTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TacTac.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TacTac";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -325,6 +446,15 @@
 			buildConfigurations = (
 				783D0D2B2FF2CDEB008F782B /* Debug */,
 				783D0D2C2FF2CDEB008F782B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E40C4A182FF40AB3006719EB /* Build configuration list for PBXNativeTarget "TacTacTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E40C4A162FF40AB3006719EB /* Debug */,
+				E40C4A172FF40AB3006719EB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
