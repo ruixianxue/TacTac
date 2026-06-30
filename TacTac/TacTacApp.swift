@@ -19,7 +19,6 @@ struct TacTacApp: App {
                 OnboardingView(hasCompletedOnboarding: $hasCompletedOnboarding)
             }
         }
-        // 配置本地 SwiftData 数据库以供 UI 预览
-        .modelContainer(for: [Tac.self, MemoryItem.self])
+        .modelContainer(for: Tac.self)
     }
 }

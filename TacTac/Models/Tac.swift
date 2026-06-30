@@ -14,6 +14,8 @@ class Tac {
     var updatedAt: Date
     var confidence: Double
     var tags: [String]
+
+    private static let iconTagPrefix = "icon:"
     
     init(
         objectName: String,
@@ -56,7 +58,23 @@ class Tac {
         self.rawInput = rawInput
         self.updatedAt = Date()
         self.confidence = confidence
-        self.tags = Array(Set(self.tags + tags)).sorted()
+        let existingNonIconTags = self.tags.filter { !$0.hasPrefix(Self.iconTagPrefix) }
+        let incomingIconTags = tags.filter { $0.hasPrefix(Self.iconTagPrefix) }
+        let incomingNonIconTags = tags.filter { !$0.hasPrefix(Self.iconTagPrefix) }
+        let mergedTags = incomingIconTags.isEmpty
+            ? existingNonIconTags + incomingNonIconTags
+            : existingNonIconTags + incomingNonIconTags + incomingIconTags
+        self.tags = Array(Set(mergedTags)).sorted()
+    }
+
+    var savedIconName: String? {
+        tags
+            .first { $0.hasPrefix(Self.iconTagPrefix) }
+            .map { String($0.dropFirst(Self.iconTagPrefix.count)) }
+    }
+
+    static func iconTag(for iconName: String) -> String {
+        "\(iconTagPrefix)\(iconName)"
     }
 
     static func normalizeObjectName(_ value: String) -> String {
