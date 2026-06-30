@@ -3,11 +3,11 @@ import Foundation
 @MainActor
 final class TacMemoryService {
     private let repository: TacRepository
-    private let nlpService: NLPService
+    private let nlpService: any TacNLPServicing
 
-    init(repository: TacRepository, nlpService: NLPService? = nil) {
+    init(repository: TacRepository, nlpService: (any TacNLPServicing)? = nil) {
         self.repository = repository
-        self.nlpService = nlpService ?? .shared
+        self.nlpService = nlpService ?? NLPService.shared
     }
 
     @discardableResult
@@ -17,6 +17,8 @@ final class TacMemoryService {
         return try repository.save(
             objectName: extracted.objectName,
             place: extracted.place,
+            specificPlace: extracted.specificPlace,
+            area: extracted.area,
             rawInput: input
         )
     }

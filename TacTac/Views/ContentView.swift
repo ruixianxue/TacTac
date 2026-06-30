@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 import SwiftData
 
@@ -5,16 +6,23 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tac.updatedAt, order: .reverse) private var memories: [Tac]
 
-    @State private var rememberInput = "my keys are on the kitchen counter"
+    @State private var rememberInput = "my keys are on the chair in my room"
     @State private var findInput = "my keys"
     @State private var result = "Ready"
     @State private var isWorking = false
+    @State private var isRememberSiriTipVisible = true
+    @State private var isFindSiriTipVisible = true
 
     var body: some View {
         NavigationStack {
             Form {
+                Section("Siri") {
+                    SiriTipView(intent: RememberTacIntent(), isVisible: $isRememberSiriTipVisible)
+                    SiriTipView(intent: FindTacIntent(), isVisible: $isFindSiriTipVisible)
+                }
+
                 Section("Remember") {
-                    TextField("Example: my keys are on the kitchen counter", text: $rememberInput, axis: .vertical)
+                    TextField("Example: my keys are on the chair in my room", text: $rememberInput, axis: .vertical)
                         .textInputAutocapitalization(.never)
 
                     Button {
@@ -56,6 +64,15 @@ struct ContentView: View {
                                     .font(.headline)
                                 Text(tac.place)
                                     .foregroundStyle(.secondary)
+                                if let area = tac.area {
+                                    Text("Specific: \(tac.specificPlace)  Area: \(area)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text("Specific: \(tac.specificPlace)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                                 Text(tac.updatedAt, style: .relative)
                                     .font(.caption)
                                     .foregroundStyle(.tertiary)
