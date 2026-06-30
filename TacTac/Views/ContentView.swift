@@ -2,13 +2,13 @@ import SwiftUI
 import FoundationModels
 
 struct ContentView: View {
-    @State private var result = "等待中..."
+    @State private var result = "Waiting..."
 
     var body: some View {
         VStack {
             Text(result)
                 .padding()
-            Button("测试 Foundation Models") {
+            Button("Test Foundation Models") {
                 Task {
                     await testFM()
                 }
@@ -20,11 +20,11 @@ struct ContentView: View {
         let session = LanguageModelSession()
         do {
             let response = try await session.respond(
-                to: "说一个字：好"
+                to: "Say one word: good"
             )
             result = response.content
         } catch {
-            result = "失败：\(error)"
+            result = "Failed: \(error)"
         }
     }
 }
