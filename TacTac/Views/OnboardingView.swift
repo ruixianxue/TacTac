@@ -39,7 +39,7 @@ struct OnboardingView: View {
             
             Spacer()
             
-            Text("TacTac needs microphone and location access to spatially anchor your items.")
+            Text("TacTac needs location access to spatially anchor your items.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
