@@ -13,12 +13,17 @@ struct TacTacApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if hasCompletedOnboarding {
-                DashboardView()
-            } else {
-                OnboardingView(hasCompletedOnboarding: $hasCompletedOnboarding)
+            Group {
+                if hasCompletedOnboarding {
+                    DashboardView()
+                } else {
+                    OnboardingView(hasCompletedOnboarding: $hasCompletedOnboarding)
+                }
+            }
+            .task {
+                TacLocationService.shared.requestPermissionIfNeeded()
             }
         }
-        .modelContainer(for: Tac.self)
+        .modelContainer(for: [Tac.self, SavedPlace.self])
     }
 }

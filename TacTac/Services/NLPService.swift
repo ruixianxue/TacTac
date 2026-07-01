@@ -141,6 +141,7 @@ final class NLPService: TacNLPServicing {
             let prompt = """
             Match the user's item query to saved object-location records.
             Choose the best index only when it is likely the same item or a closely related item.
+            Do not ignore ownership or distinguishing modifiers: "boyfriend keys" should not match plain "keys" unless a record also mentions boyfriend.
             Use -1 when no record likely matches.
 
             Query: \(query)

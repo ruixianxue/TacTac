@@ -197,7 +197,7 @@ private struct RememberItemOptionsProvider: DynamicOptionsProvider {
 enum TacMemoryIntentServices {
     @MainActor
     static func makeMemoryService() throws -> TacMemoryService {
-        let container = try ModelContainer(for: Tac.self)
+        let container = try ModelContainer(for: Tac.self, SavedPlace.self)
         let repository = TacRepository(modelContext: ModelContext(container))
 
         return TacMemoryService(repository: repository)

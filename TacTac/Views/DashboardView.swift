@@ -4,9 +4,11 @@ import SwiftUI
 struct DashboardView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tac.updatedAt, order: .reverse) private var items: [Tac]
+    @Query(sort: \SavedPlace.name) private var savedPlaces: [SavedPlace]
 
     @State private var searchText = ""
     @State private var isAddItemPresented = false
+    @State private var isPlacesPresented = false
     @State private var editingItem: Tac?
 
     private var searchResults: [Tac] {
@@ -21,6 +23,7 @@ struct DashboardView: View {
                 || $0.place.localizedCaseInsensitiveContains(query)
                 || $0.specificPlace.localizedCaseInsensitiveContains(query)
                 || ($0.area?.localizedCaseInsensitiveContains(query) ?? false)
+                || ($0.namedPlace?.localizedCaseInsensitiveContains(query) ?? false)
         }
     }
 
@@ -52,6 +55,15 @@ struct DashboardView: View {
             .navigationTitle("TacTac")
             .searchable(text: $searchText, prompt: "Search an item")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        isPlacesPresented = true
+                    } label: {
+                        Image(systemName: "location.circle")
+                    }
+                    .accessibilityLabel("Saved places")
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         isAddItemPresented = true
@@ -65,18 +77,23 @@ struct DashboardView: View {
                 MemoryItemFormView(
                     title: "Add Item",
                     saveTitle: "Save",
-                    draft: .empty
+                    draft: .empty,
+                    savedPlaces: savedPlaces
                 ) { draft in
-                    addItem(draft)
+                    await addItem(draft)
                 }
+            }
+            .sheet(isPresented: $isPlacesPresented) {
+                SavedPlacesView(savedPlaces: savedPlaces)
             }
             .sheet(item: $editingItem) { item in
                 MemoryItemFormView(
                     title: "Edit Item",
                     saveTitle: "Done",
-                    draft: MemoryItemDraft(item: item)
+                    draft: MemoryItemDraft(item: item),
+                    savedPlaces: savedPlaces
                 ) { draft in
-                    updateItem(item, with: draft)
+                    await updateItem(item, with: draft)
                 }
             }
         }
@@ -92,10 +109,11 @@ struct DashboardView: View {
         }
     }
 
-    private func addItem(_ draft: MemoryItemDraft) {
+    private func addItem(_ draft: MemoryItemDraft) async {
         let repository = TacRepository(modelContext: modelContext)
         let place = Tac.displayPlace(specificPlace: draft.specificLocation, area: draft.area)
         let rawInput = "\(draft.objectName) is \(place)"
+        let locationSnapshot = await locationSnapshot(for: draft)
 
         do {
             try repository.save(
@@ -104,16 +122,18 @@ struct DashboardView: View {
                 specificPlace: draft.specificLocation,
                 area: draft.area,
                 rawInput: rawInput,
-                tags: [Tac.iconTag(for: draft.iconName)]
+                tags: [Tac.iconTag(for: draft.iconName)],
+                locationSnapshot: locationSnapshot
             )
         } catch {
             assertionFailure("Could not save item: \(error.localizedDescription)")
         }
     }
 
-    private func updateItem(_ item: Tac, with draft: MemoryItemDraft) {
+    private func updateItem(_ item: Tac, with draft: MemoryItemDraft) async {
         let place = Tac.displayPlace(specificPlace: draft.specificLocation, area: draft.area)
         let rawInput = "\(draft.objectName) is \(place)"
+        let locationSnapshot = await locationSnapshot(for: draft)
 
         item.updateLocation(
             objectName: draft.objectName,
@@ -121,13 +141,37 @@ struct DashboardView: View {
             specificPlace: draft.specificLocation,
             area: draft.area,
             rawInput: rawInput,
-            tags: [Tac.iconTag(for: draft.iconName)]
+            tags: [Tac.iconTag(for: draft.iconName)],
+            latitude: locationSnapshot?.latitude,
+            longitude: locationSnapshot?.longitude,
+            horizontalAccuracy: locationSnapshot?.horizontalAccuracy,
+            namedPlace: locationSnapshot?.namedPlace
         )
 
         do {
             try modelContext.save()
         } catch {
             assertionFailure("Could not update item: \(error.localizedDescription)")
+        }
+    }
+
+    private func locationSnapshot(for draft: MemoryItemDraft) async -> TacLocationSnapshot? {
+        switch draft.placeSelection {
+        case .automatic:
+            return await TacLocationService.shared.currentLocationSnapshot(namedPlaces: savedPlaces)
+        case .none:
+            return nil
+        case .savedPlace(let normalizedName):
+            guard let savedPlace = savedPlaces.first(where: { $0.normalizedName == normalizedName }) else {
+                return nil
+            }
+
+            return TacLocationSnapshot(
+                latitude: savedPlace.latitude,
+                longitude: savedPlace.longitude,
+                horizontalAccuracy: savedPlace.radiusMeters,
+                namedPlace: savedPlace.name
+            )
         }
     }
 }
@@ -137,26 +181,45 @@ private struct MemoryItemFormView: View {
 
     let title: String
     let saveTitle: String
-    let onSave: (MemoryItemDraft) -> Void
+    let savedPlaces: [SavedPlace]
+    let onSave: (MemoryItemDraft) async -> Void
 
     @State private var objectName: String
     @State private var specificLocation: String
     @State private var area: String
     @State private var selectedIconName: String
+    @State private var placeSelection: MemoryPlaceSelection
 
-    init(title: String, saveTitle: String, draft: MemoryItemDraft, onSave: @escaping (MemoryItemDraft) -> Void) {
+    init(
+        title: String,
+        saveTitle: String,
+        draft: MemoryItemDraft,
+        savedPlaces: [SavedPlace],
+        onSave: @escaping (MemoryItemDraft) async -> Void
+    ) {
         self.title = title
         self.saveTitle = saveTitle
+        self.savedPlaces = savedPlaces
         self.onSave = onSave
         _objectName = State(initialValue: draft.objectName)
         _specificLocation = State(initialValue: draft.specificLocation)
         _area = State(initialValue: draft.area ?? "")
         _selectedIconName = State(initialValue: draft.iconName)
+        _placeSelection = State(initialValue: draft.placeSelection)
     }
 
     private var canSave: Bool {
         !objectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !specificLocation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var placeSelectionOptions: [MemoryPlaceSelectionOption] {
+        [
+            MemoryPlaceSelectionOption(title: "Automatic", iconName: "location.viewfinder", selection: .automatic),
+            MemoryPlaceSelectionOption(title: "No saved place", iconName: "location.slash", selection: .none)
+        ] + savedPlaces.map { place in
+            MemoryPlaceSelectionOption(title: place.name, iconName: place.iconName, selection: .savedPlace(place.normalizedName))
+        }
     }
 
     var body: some View {
@@ -172,6 +235,14 @@ private struct MemoryItemFormView: View {
                         .textInputAutocapitalization(.sentences)
                     TextField("Area or room", text: $area)
                         .textInputAutocapitalization(.words)
+
+                    Picker("Saved place", selection: $placeSelection) {
+                        ForEach(placeSelectionOptions) { option in
+                            Label(option.title, systemImage: option.iconName)
+                                .tag(option.selection)
+                        }
+                    }
+                    .pickerStyle(.menu)
                 }
 
                 Section("Icon") {
@@ -207,7 +278,9 @@ private struct MemoryItemFormView: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button(saveTitle) {
-                        save()
+                        Task {
+                            await save()
+                        }
                     }
                     .disabled(!canSave)
                 }
@@ -215,15 +288,16 @@ private struct MemoryItemFormView: View {
         }
     }
 
-    private func save() {
+    private func save() async {
         let draft = MemoryItemDraft(
             objectName: objectName.trimmingCharacters(in: .whitespacesAndNewlines),
             specificLocation: specificLocation.trimmingCharacters(in: .whitespacesAndNewlines),
             area: area.trimmingCharacters(in: .whitespacesAndNewlines),
-            iconName: selectedIconName
+            iconName: selectedIconName,
+            placeSelection: placeSelection
         )
 
-        onSave(draft)
+        await onSave(draft)
         dismiss()
     }
 }
@@ -233,19 +307,28 @@ private struct MemoryItemDraft {
     let specificLocation: String
     let area: String?
     let iconName: String
+    let placeSelection: MemoryPlaceSelection
 
     static let empty = MemoryItemDraft(
         objectName: "",
         specificLocation: "",
         area: "",
-        iconName: MemoryIconOption.defaultOption.systemName
+        iconName: MemoryIconOption.defaultOption.systemName,
+        placeSelection: .automatic
     )
 
-    init(objectName: String, specificLocation: String, area: String, iconName: String) {
+    init(
+        objectName: String,
+        specificLocation: String,
+        area: String,
+        iconName: String,
+        placeSelection: MemoryPlaceSelection
+    ) {
         self.objectName = objectName
         self.specificLocation = specificLocation
         self.area = area.isEmpty ? nil : area
         self.iconName = iconName
+        self.placeSelection = placeSelection
     }
 
     init(item: Tac) {
@@ -253,6 +336,239 @@ private struct MemoryItemDraft {
         self.specificLocation = item.specificPlace
         self.area = item.area
         self.iconName = item.savedIconName ?? MemoryIconOption.iconName(for: item)
+
+        if let namedPlace = item.namedPlace {
+            self.placeSelection = .savedPlace(SavedPlace.normalizeName(namedPlace))
+        } else {
+            self.placeSelection = .automatic
+        }
+    }
+}
+
+private enum MemoryPlaceSelection: Hashable {
+    case automatic
+    case none
+    case savedPlace(String)
+}
+
+private struct MemoryPlaceSelectionOption: Identifiable {
+    let title: String
+    let iconName: String
+    let selection: MemoryPlaceSelection
+
+    var id: MemoryPlaceSelection { selection }
+}
+
+private struct SavedPlacesView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
+    let savedPlaces: [SavedPlace]
+
+    @State private var placeName = "Home"
+    @State private var radiusMeters = 150.0
+    @State private var selectedIconName = SavedPlaceIconOption.defaultOption.systemName
+    @State private var statusMessage: String?
+    @State private var isSaving = false
+
+    private let suggestedPlaceNames = ["Home", "Work", "School"]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Place") {
+                    if !TacLocationService.isUsageDescriptionConfigured {
+                        Text("Location permission is not configured in the app target yet.")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    TextField("Place name", text: $placeName)
+                        .textInputAutocapitalization(.words)
+
+                    HStack {
+                        ForEach(suggestedPlaceNames, id: \.self) { name in
+                            Button(name) {
+                                placeName = name
+                                selectedIconName = SavedPlaceIconOption.iconName(for: name)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+
+                    Stepper("Radius: \(Int(radiusMeters)) m", value: $radiusMeters, in: 50...500, step: 25)
+                }
+
+                Section("Icon") {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 56), spacing: 12)], spacing: 12) {
+                        ForEach(SavedPlaceIconOption.all) { option in
+                            Button {
+                                selectedIconName = option.systemName
+                            } label: {
+                                Image(systemName: option.systemName)
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(selectedIconName == option.systemName ? .white : Color.accentColor)
+                                    .frame(width: 48, height: 48)
+                                    .background(
+                                        Circle()
+                                            .fill(selectedIconName == option.systemName ? Color.accentColor : Color.accentColor.opacity(0.1))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(option.title)
+                        }
+                    }
+                    .padding(.vertical, 4)
+
+                    Button {
+                        Task {
+                            await saveCurrentPlace()
+                        }
+                    } label: {
+                        Label("Set to Current Location", systemImage: "location.fill")
+                    }
+                    .disabled(isSaving || placeName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+
+                if let statusMessage {
+                    Section {
+                        Text(statusMessage)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section("Saved Places") {
+                    if savedPlaces.isEmpty {
+                        Text("No saved places yet.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(savedPlaces) { place in
+                            HStack(spacing: 12) {
+                                Image(systemName: place.iconName)
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(Color.accentColor)
+                                    .frame(width: 32, height: 32)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.accentColor.opacity(0.1))
+                                    )
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(place.name)
+                                        .font(.headline)
+                                    Text("Radius \(Int(place.radiusMeters)) m")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .onDelete(perform: deletePlaces)
+                    }
+                }
+            }
+            .navigationTitle("Saved Places")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private func saveCurrentPlace() async {
+        isSaving = true
+        defer { isSaving = false }
+
+        TacLocationService.shared.requestPermissionIfNeeded()
+
+        guard let snapshot = await TacLocationService.shared.currentLocationSnapshot(namedPlaces: []) else {
+            statusMessage = "Location is unavailable. Check location permission and try again."
+            return
+        }
+
+        let cleanedName = placeName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !cleanedName.isEmpty else {
+            statusMessage = "Enter a place name."
+            return
+        }
+
+        let normalizedName = SavedPlace.normalizeName(cleanedName)
+        let existingPlace = savedPlaces.first { $0.normalizedName == normalizedName }
+
+        if let existingPlace {
+            existingPlace.update(
+                name: cleanedName,
+                latitude: snapshot.latitude,
+                longitude: snapshot.longitude,
+                radiusMeters: radiusMeters,
+                iconName: selectedIconName
+            )
+        } else {
+            let place = SavedPlace(
+                name: cleanedName,
+                latitude: snapshot.latitude,
+                longitude: snapshot.longitude,
+                radiusMeters: radiusMeters,
+                iconName: selectedIconName
+            )
+            modelContext.insert(place)
+        }
+
+        do {
+            try modelContext.save()
+            statusMessage = "Saved \(cleanedName)."
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    private func deletePlaces(offsets: IndexSet) {
+        withAnimation {
+            for index in offsets {
+                modelContext.delete(savedPlaces[index])
+            }
+
+            try? modelContext.save()
+        }
+    }
+}
+
+private struct SavedPlaceIconOption: Identifiable {
+    let title: String
+    let systemName: String
+
+    var id: String { systemName }
+
+    static let defaultOption = SavedPlaceIconOption(title: "Place", systemName: "mappin.circle.fill")
+
+    static let all = [
+        SavedPlaceIconOption(title: "Place", systemName: "mappin.circle.fill"),
+        SavedPlaceIconOption(title: "Home", systemName: "house.fill"),
+        SavedPlaceIconOption(title: "Work", systemName: "building.2.fill"),
+        SavedPlaceIconOption(title: "School", systemName: "graduationcap.fill"),
+        SavedPlaceIconOption(title: "Gym", systemName: "figure.strengthtraining.traditional"),
+        SavedPlaceIconOption(title: "Shop", systemName: "cart.fill"),
+        SavedPlaceIconOption(title: "Cafe", systemName: "cup.and.saucer.fill"),
+        SavedPlaceIconOption(title: "Park", systemName: "tree.fill"),
+        SavedPlaceIconOption(title: "Car", systemName: "car.fill"),
+        SavedPlaceIconOption(title: "Transit", systemName: "tram.fill")
+    ]
+
+    static func iconName(for placeName: String) -> String {
+        let normalizedName = SavedPlace.normalizeName(placeName)
+
+        if normalizedName.contains("home") {
+            return "house.fill"
+        } else if normalizedName.contains("work") || normalizedName.contains("office") {
+            return "building.2.fill"
+        } else if normalizedName.contains("school") || normalizedName.contains("university") || normalizedName.contains("college") {
+            return "graduationcap.fill"
+        }
+
+        return defaultOption.systemName
     }
 }
 
@@ -345,6 +661,12 @@ struct MemoryItemRow: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
+                }
+
+                if let namedPlace = item.displayLocationContext {
+                    Label(namedPlace, systemImage: "location.fill")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
             }
 

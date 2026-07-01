@@ -14,6 +14,10 @@ class Tac {
     var updatedAt: Date
     var confidence: Double
     var tags: [String]
+    var latitude: Double?
+    var longitude: Double?
+    var horizontalAccuracy: Double?
+    var namedPlace: String?
 
     private static let iconTagPrefix = "icon:"
     
@@ -24,7 +28,11 @@ class Tac {
         area: String? = nil,
         rawInput: String,
         confidence: Double = 1.0,
-        tags: [String] = []
+        tags: [String] = [],
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        horizontalAccuracy: Double? = nil,
+        namedPlace: String? = nil
     ) {
         let now = Date()
 
@@ -39,6 +47,10 @@ class Tac {
         self.updatedAt = now
         self.confidence = confidence
         self.tags = tags
+        self.latitude = latitude
+        self.longitude = longitude
+        self.horizontalAccuracy = horizontalAccuracy
+        self.namedPlace = Self.cleanedOptionalLocation(namedPlace)
     }
 
     func updateLocation(
@@ -48,7 +60,11 @@ class Tac {
         area: String? = nil,
         rawInput: String,
         confidence: Double = 1.0,
-        tags: [String] = []
+        tags: [String] = [],
+        latitude: Double? = nil,
+        longitude: Double? = nil,
+        horizontalAccuracy: Double? = nil,
+        namedPlace: String? = nil
     ) {
         self.objectName = objectName.trimmingCharacters(in: .whitespacesAndNewlines)
         self.normalizedObjectName = Self.normalizeObjectName(objectName)
@@ -58,6 +74,10 @@ class Tac {
         self.rawInput = rawInput
         self.updatedAt = Date()
         self.confidence = confidence
+        self.latitude = latitude
+        self.longitude = longitude
+        self.horizontalAccuracy = horizontalAccuracy
+        self.namedPlace = Self.cleanedOptionalLocation(namedPlace)
         let existingNonIconTags = self.tags.filter { !$0.hasPrefix(Self.iconTagPrefix) }
         let incomingIconTags = tags.filter { $0.hasPrefix(Self.iconTagPrefix) }
         let incomingNonIconTags = tags.filter { !$0.hasPrefix(Self.iconTagPrefix) }
@@ -71,6 +91,31 @@ class Tac {
         tags
             .first { $0.hasPrefix(Self.iconTagPrefix) }
             .map { String($0.dropFirst(Self.iconTagPrefix.count)) }
+    }
+
+    var answerPlace: String {
+        guard let displayLocationContext else {
+            return place
+        }
+
+        return "\(place) at \(displayLocationContext)"
+    }
+
+    var displayLocationContext: String? {
+        guard let namedPlace else {
+            return nil
+        }
+
+        let normalizedNamedPlace = Self.normalizeObjectName(namedPlace)
+        let normalizedPlace = Self.normalizeObjectName(place)
+
+        guard area == nil,
+              !normalizedNamedPlace.isEmpty,
+              !normalizedPlace.contains(normalizedNamedPlace) else {
+            return nil
+        }
+
+        return namedPlace
     }
 
     static func iconTag(for iconName: String) -> String {
