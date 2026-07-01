@@ -49,6 +49,8 @@ struct OnboardingView: View {
             
             // 继续按钮
             Button(action: {
+                TacLocationService.shared.requestPermissionIfNeeded()
+
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                     hasCompletedOnboarding = true
                 }
