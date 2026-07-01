@@ -7,33 +7,31 @@ struct OnboardingView: View {
         VStack(spacing: 30) {
             Spacer()
             
-            // 标题部分
-            Text("Bienvenue sur\nTacTac")
+            Text("Welcome to\nTacTac")
                 .font(.system(size: 40, weight: .bold, design: .rounded))
                 .multilineTextAlignment(.center)
                 .foregroundColor(.primary)
             
-            Text("Votre mémoire spatiale.\nPortée par votre voix.")
+            Text("Your spatial memory.\nPowered by your voice.")
                 .font(.title3)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             
-            // 核心功能介绍 (原生视觉风格)
             VStack(alignment: .leading, spacing: 24) {
                 FeatureRow(
                     icon: "mic.fill",
-                    title: "Siri-Native",
-                    subtitle: "Demandez à Siri où sont vos affaires, sans écran."
+                    title: "Native Siri Support",
+                    subtitle: "Ask Siri where your things are, without opening the app."
                 )
                 FeatureRow(
                     icon: "mappin.and.ellipse",
-                    title: "Mémoire Spatiale",
-                    subtitle: "Remplacez les capteurs physiques par la précision du langage."
+                    title: "Spatial Memory",
+                    subtitle: "Replace physical trackers with the precision of language."
                 )
                 FeatureRow(
                     icon: "lock.shield.fill",
-                    title: "Confidentialité Absolue",
-                    subtitle: "Données inaccessibles, même par Apple."
+                    title: "Complete Privacy",
+                    subtitle: "Your memories are protected with secure on-device data handling."
                 )
             }
             .padding(.vertical, 30)
@@ -41,13 +39,13 @@ struct OnboardingView: View {
             
             Spacer()
             
-            Text("TacTac nécessite l'accès au microphone et à la localisation pour l'ancrage spatial de vos objets.")
+            Text("TacTac needs location access to spatially anchor your items.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 30)
             
-            // 继续按钮
+            // Continue button
             Button(action: {
                 TacLocationService.shared.requestPermissionIfNeeded()
 
@@ -55,7 +53,7 @@ struct OnboardingView: View {
                     hasCompletedOnboarding = true
                 }
             }) {
-                Text("Continuer")
+                Text("Continue")
                     .font(.headline)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -69,7 +67,7 @@ struct OnboardingView: View {
     }
 }
 
-// 提取的行组件，保持代码整洁
+// Extracted row component to keep the code tidy
 struct FeatureRow: View {
     var icon: String
     var title: String
