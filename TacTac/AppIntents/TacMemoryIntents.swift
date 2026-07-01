@@ -56,7 +56,7 @@ struct FindTacIntent: AppIntent {
     func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
         do {
             let service = try TacMemoryIntentServices.makeMemoryService()
-            let answer = try await service.find(query: query)
+            let answer = try await service.findForSiriDemo(query: query)
 
             return .result(value: answer, dialog: IntentDialog(stringLiteral: answer))
         } catch {
@@ -102,7 +102,7 @@ struct HandleTacCommandIntent: AppIntent {
             let normalizedCommand = command.lowercased()
 
             if Self.isFindCommand(normalizedCommand) {
-                let answer = try await service.find(query: command)
+                let answer = try await service.findForSiriDemo(query: command)
                 return .result(value: answer)
             }
 

@@ -163,14 +163,13 @@ final class NLPService: TacNLPServicing {
     }
 
     func generateAnswer(objectName: String, place: String, createdAt: Date) async throws -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = Locale(identifier: "en_US")
-        let timeAgo = formatter.localizedString(for: createdAt, relativeTo: Date())
+        let timeAgo = Self.storedDescription(for: createdAt)
 
         do {
             let session = try makeSession()
             let prompt = """
             Answer in one short natural sentence in English.
+            Refer to the item as the user's item, using "your" instead of "my".
             Item: \(objectName)
             Location: \(place)
             Stored: \(timeAgo)
@@ -184,6 +183,23 @@ final class NLPService: TacNLPServicing {
         } catch {
             return "Your \(objectName) is \(place), stored \(timeAgo)."
         }
+    }
+
+    private static func storedDescription(for date: Date) -> String {
+        let calendar = Calendar.current
+
+        if calendar.isDateInYesterday(date) {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "h a"
+
+            return "\(formatter.string(from: date)) yesterday"
+        }
+
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = Locale(identifier: "en_US")
+
+        return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     private func makeSession() throws -> LanguageModelSession {

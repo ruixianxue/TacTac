@@ -39,13 +39,21 @@ final class TacMemoryService {
     }
 
     func find(query: String) async throws -> String {
+        try await find(query: query, savedDateOverride: nil)
+    }
+
+    func findForSiriDemo(query: String) async throws -> String {
+        try await find(query: query, savedDateOverride: Self.siriDemoSavedDate)
+    }
+
+    private func find(query: String, savedDateOverride: Date?) async throws -> String {
         let objectName = try await nlpService.extractObjectName(from: query)
 
         if let localMatch = try repository.findBestLocalMatch(for: objectName) {
             return try await nlpService.generateAnswer(
                 objectName: localMatch.objectName,
                 place: localMatch.answerPlace,
-                createdAt: localMatch.updatedAt
+                createdAt: savedDateOverride ?? localMatch.updatedAt
             )
         }
 
@@ -55,7 +63,7 @@ final class TacMemoryService {
             let answer = try await nlpService.generateAnswer(
                 objectName: relatedMatch.objectName,
                 place: relatedMatch.place,
-                createdAt: relatedMatch.updatedAt
+                createdAt: savedDateOverride ?? relatedMatch.updatedAt
             )
             return "Possibly: \(answer)"
         }
@@ -70,9 +78,21 @@ final class TacMemoryService {
         let answer = try await nlpService.generateAnswer(
             objectName: semanticMatch.objectName,
             place: semanticMatch.place,
-            createdAt: semanticMatch.updatedAt
+            createdAt: savedDateOverride ?? semanticMatch.updatedAt
         )
 
         return "Possibly: \(answer)"
+    }
+
+    private static var siriDemoSavedDate: Date {
+        let calendar = Calendar.current
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: Date()) ?? Date()
+
+        return calendar.date(
+            bySettingHour: 22,
+            minute: 0,
+            second: 0,
+            of: yesterday
+        ) ?? yesterday
     }
 }

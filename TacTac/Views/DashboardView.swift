@@ -43,7 +43,7 @@ struct DashboardView: View {
                             Button {
                                 editingItem = item
                             } label: {
-                                MemoryItemRow(item: item)
+                                MemoryItemRow(item: item, savedPlaces: savedPlaces)
                             }
                             .buttonStyle(.plain)
                         }
@@ -222,6 +222,11 @@ private struct MemoryItemFormView: View {
         }
     }
 
+    private var selectedPlaceOption: MemoryPlaceSelectionOption {
+        placeSelectionOptions.first { $0.selection == placeSelection }
+            ?? MemoryPlaceSelectionOption(title: "Saved place", iconName: "mappin.circle.fill", selection: placeSelection)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -236,11 +241,13 @@ private struct MemoryItemFormView: View {
                     TextField("Area or room", text: $area)
                         .textInputAutocapitalization(.words)
 
-                    Picker("Saved place", selection: $placeSelection) {
+                    Picker(selection: $placeSelection) {
                         ForEach(placeSelectionOptions) { option in
                             Label(option.title, systemImage: option.iconName)
                                 .tag(option.selection)
                         }
+                    } label: {
+                        Label(selectedPlaceOption.title, systemImage: selectedPlaceOption.iconName)
                     }
                     .pickerStyle(.menu)
                 }
@@ -367,11 +374,12 @@ private struct SavedPlacesView: View {
 
     @State private var placeName = "Home"
     @State private var radiusMeters = 150.0
-    @State private var selectedIconName = SavedPlaceIconOption.defaultOption.systemName
+    @State private var selectedIconName = SavedPlaceIconOption.iconName(for: "Home")
     @State private var statusMessage: String?
     @State private var isSaving = false
+    @State private var isIconManuallySelected = false
 
-    private let suggestedPlaceNames = ["Home", "Work", "School"]
+    private let suggestedPlaceNames = ["Home", "Work", "School", "Gym", "Shop", "Cafe", "Park", "Car", "Transit"]
 
     var body: some View {
         NavigationStack {
@@ -384,14 +392,26 @@ private struct SavedPlacesView: View {
 
                     TextField("Place name", text: $placeName)
                         .textInputAutocapitalization(.words)
-
-                    HStack {
-                        ForEach(suggestedPlaceNames, id: \.self) { name in
-                            Button(name) {
-                                placeName = name
-                                selectedIconName = SavedPlaceIconOption.iconName(for: name)
+                        .onChange(of: placeName) { _, newValue in
+                            guard !isIconManuallySelected else {
+                                return
                             }
-                            .buttonStyle(.bordered)
+
+                            selectedIconName = SavedPlaceIconOption.iconName(for: newValue)
+                        }
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(suggestedPlaceNames, id: \.self) { name in
+                                Button {
+                                    placeName = name
+                                    selectedIconName = SavedPlaceIconOption.iconName(for: name)
+                                    isIconManuallySelected = false
+                                } label: {
+                                    Label(name, systemImage: SavedPlaceIconOption.iconName(for: name))
+                                }
+                                .buttonStyle(.bordered)
+                            }
                         }
                     }
 
@@ -403,6 +423,7 @@ private struct SavedPlacesView: View {
                         ForEach(SavedPlaceIconOption.all) { option in
                             Button {
                                 selectedIconName = option.systemName
+                                isIconManuallySelected = true
                             } label: {
                                 Image(systemName: option.systemName)
                                     .font(.system(size: 22))
@@ -560,12 +581,24 @@ private struct SavedPlaceIconOption: Identifiable {
     static func iconName(for placeName: String) -> String {
         let normalizedName = SavedPlace.normalizeName(placeName)
 
-        if normalizedName.contains("home") {
+        if normalizedName.contains("home") || normalizedName.contains("house") || normalizedName.contains("apartment") {
             return "house.fill"
-        } else if normalizedName.contains("work") || normalizedName.contains("office") {
+        } else if normalizedName.contains("work") || normalizedName.contains("office") || normalizedName.contains("studio") {
             return "building.2.fill"
-        } else if normalizedName.contains("school") || normalizedName.contains("university") || normalizedName.contains("college") {
+        } else if normalizedName.contains("school") || normalizedName.contains("university") || normalizedName.contains("college") || normalizedName.contains("campus") {
             return "graduationcap.fill"
+        } else if normalizedName.contains("gym") || normalizedName.contains("fitness") || normalizedName.contains("sport") {
+            return "figure.strengthtraining.traditional"
+        } else if normalizedName.contains("shop") || normalizedName.contains("store") || normalizedName.contains("market") || normalizedName.contains("mall") {
+            return "cart.fill"
+        } else if normalizedName.contains("cafe") || normalizedName.contains("coffee") || normalizedName.contains("restaurant") {
+            return "cup.and.saucer.fill"
+        } else if normalizedName.contains("park") || normalizedName.contains("garden") {
+            return "tree.fill"
+        } else if normalizedName.contains("car") || normalizedName.contains("parking") || normalizedName.contains("garage") {
+            return "car.fill"
+        } else if normalizedName.contains("transit") || normalizedName.contains("station") || normalizedName.contains("train") || normalizedName.contains("tram") || normalizedName.contains("metro") {
+            return "tram.fill"
         }
 
         return defaultOption.systemName
@@ -635,52 +668,71 @@ struct EmptyStateView: View {
 
 struct MemoryItemRow: View {
     let item: Tac
+    let savedPlaces: [SavedPlace]
 
     var body: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(Color.accentColor.opacity(0.1))
-                    .frame(width: 48, height: 48)
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: iconName)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 46, height: 46)
+                .background(
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.12))
+                )
 
-                Image(systemName: iconName)
-                    .foregroundStyle(Color.accentColor)
-                    .font(.system(size: 20))
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 7) {
                 Text(item.objectName)
                     .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
 
-                HStack(spacing: 4) {
-                    Image(systemName: "mappin.and.ellipse")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
+                Label {
                     Text(item.place)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
                         .lineLimit(2)
+                } icon: {
+                    Image(systemName: "mappin.and.ellipse")
                 }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .labelStyle(.titleAndIcon)
 
                 if let namedPlace = item.displayLocationContext {
-                    Label(namedPlace, systemImage: "location.fill")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                    Label(namedPlace, systemImage: namedPlaceIconName)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.accentColor)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color.accentColor.opacity(0.10))
+                        )
                 }
             }
-
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(item.updatedAt, style: .relative)
-                .font(.caption2)
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(.tertiary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .frame(minWidth: 52, alignment: .trailing)
         }
         .contentShape(Rectangle())
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
     }
 
     private var iconName: String {
         item.savedIconName ?? MemoryIconOption.iconName(for: item)
+    }
+
+    private var namedPlaceIconName: String {
+        guard let namedPlace = item.namedPlace else {
+            return "location.fill"
+        }
+
+        let normalizedName = SavedPlace.normalizeName(namedPlace)
+        return savedPlaces.first { $0.normalizedName == normalizedName }?.iconName
+            ?? SavedPlaceIconOption.iconName(for: namedPlace)
     }
 }
