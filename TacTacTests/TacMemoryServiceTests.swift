@@ -26,6 +26,15 @@ struct TacMemoryServiceTests {
     }
 
     @Test
+    func ruleBasedExtractionUsesUserFacingPossessives() async throws {
+        let extraction = try await NLPService.shared.extractTac(from: "my stuff is in my bedroom")
+
+        #expect(extraction.objectName == "stuff")
+        #expect(extraction.place == "in your bedroom")
+        #expect(extraction.specificPlace == "bedroom")
+    }
+
+    @Test
     func rememberUpdatesExistingItem() async throws {
         let harness = try MemoryServiceHarness()
         harness.nlp.extractions["my keys are on the chair"] = TacExtraction(

@@ -68,19 +68,20 @@ final class NLPService: TacNLPServicing {
             let response = try await session.respond(to: prompt, generating: TacPlacementOutput.self)
             let output = response.content
 
-            guard let objectName = cleanedRequiredField(output.objectName),
+            guard let objectName = cleanedObjectName(output.objectName),
                   let specificPlace = cleanedRequiredField(output.specificPlace) else {
                 throw NLPServiceError.couldNotExtractPlacement
             }
 
-            let area = cleanedOptionalField(output.area)
+            let area = cleanedOptionalField(output.area).map(secondPersonPossessives)
             let place = cleanedRequiredField(output.place)
+                .map(secondPersonPossessives)
                 ?? Tac.displayPlace(specificPlace: specificPlace, area: area)
 
             return TacExtraction(
                 objectName: objectName,
                 place: place,
-                specificPlace: specificPlace,
+                specificPlace: secondPersonPossessives(specificPlace),
                 area: area
             )
         } catch {
@@ -111,7 +112,7 @@ final class NLPService: TacNLPServicing {
 
             let response = try await session.respond(to: prompt, generating: ObjectQueryOutput.self)
 
-            guard let objectName = cleanedRequiredField(response.content.objectName) else {
+            guard let objectName = cleanedObjectName(response.content.objectName) else {
                 throw NLPServiceError.couldNotExtractObject
             }
 
@@ -171,19 +172,26 @@ final class NLPService: TacNLPServicing {
             let session = try makeSession()
             let prompt = """
             Answer in one short natural sentence in English.
+            Refer to the item and location as belonging to the user, using "your" instead of "my".
             Item: \(objectName)
-            Location: \(place)
+            Location: \(secondPersonPossessives(place))
             Stored: \(timeAgo)
 
-            Example: "Your keys are at the front door, stored 3 hours ago."
+            Example: "Your keys are at your front door, stored 3 hours ago."
             Output only that one sentence.
             """
 
             let response = try await session.respond(to: prompt)
             return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
-            return "Your \(objectName) is \(place), stored \(timeAgo)."
+            return "Your \(objectName) is \(secondPersonPossessives(place)), stored \(timeAgo)."
         }
+    }
+
+    private func secondPersonPossessives(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: #"\b[Mm]y\b"#, with: "your", options: .regularExpression)
+            .replacingOccurrences(of: #"\b[Mm]ine\b"#, with: "yours", options: .regularExpression)
     }
 
     private func makeSession() throws -> LanguageModelSession {
@@ -275,10 +283,12 @@ final class NLPService: TacNLPServicing {
 
         let specificPlace = cleanedSpecificPlace(cleanedPlace)
 
+        let place = rawPlaceIncludesPreposition ? cleanedPlace : "at \(cleanedPlace)"
+
         return TacExtraction(
             objectName: objectName,
-            place: rawPlaceIncludesPreposition ? cleanedPlace : "at \(cleanedPlace)",
-            specificPlace: specificPlace,
+            place: secondPersonPossessives(place),
+            specificPlace: secondPersonPossessives(specificPlace),
             area: nil
         )
     }
