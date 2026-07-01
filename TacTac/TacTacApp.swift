@@ -4,8 +4,7 @@ import AppIntents
 
 @main
 struct TacTacApp: App {
-    // 使用 AppStorage 记录用户是否已经完成首次引导
-    @AppStorage("hasCompletedOnboarding") var hasCompletedOnboarding: Bool = false
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     init() {
         TacShortcutsProvider.updateAppShortcutParameters()
@@ -19,9 +18,6 @@ struct TacTacApp: App {
                 } else {
                     OnboardingView(hasCompletedOnboarding: $hasCompletedOnboarding)
                 }
-            }
-            .task {
-                TacLocationService.shared.requestPermissionIfNeeded()
             }
         }
         .modelContainer(for: [Tac.self, SavedPlace.self])

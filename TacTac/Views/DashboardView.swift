@@ -452,7 +452,8 @@ private struct SavedPlacesView: View {
                         }
                     } label: {
                         Label(source.saveTitle, systemImage: source.iconName)
-                            .frame(maxWidth: .infinity)
+                            .offset(x: -16)
+                            .frame(maxWidth: .infinity, alignment: .center)
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(isSaving || !canSave)
@@ -816,15 +817,39 @@ struct MemoryItemRow: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
 
-                Label {
-                    Text(item.place)
-                        .lineLimit(2)
-                } icon: {
-                    Image(systemName: "mappin.and.ellipse")
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(item.specificPlace.isEmpty ? item.place : item.specificPlace)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.mint)
+                        .lineLimit(1)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background {
+                            Capsule()
+                                .fill(Color.mint.opacity(0.12))
+                        }
+
+                    if let area = item.area {
+                        Text(area)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.accentColor)
+                            .lineLimit(1)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background {
+                                Capsule()
+                                    .fill(Color.accentColor.opacity(0.10))
+                            }
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Text(displayDate)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.tertiary)
+                        .monospacedDigit()
+                        .lineLimit(1)
                 }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .labelStyle(.titleAndIcon)
 
                 if let namedPlace = item.displayLocationContext {
                     Label(namedPlace, systemImage: namedPlaceIconName)
@@ -839,16 +864,17 @@ struct MemoryItemRow: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-
-            Text(item.updatedAt, style: .relative)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.tertiary)
-                .monospacedDigit()
-                .lineLimit(1)
-                .frame(minWidth: 52, alignment: .trailing)
         }
         .contentShape(Rectangle())
         .padding(.vertical, 6)
+    }
+
+    private var displayDate: String {
+        if Calendar.current.isDate(item.updatedAt, equalTo: Date(), toGranularity: .year) {
+            return item.updatedAt.formatted(.dateTime.month(.abbreviated).day())
+        }
+
+        return item.updatedAt.formatted(.dateTime.year().month(.abbreviated).day())
     }
 
     private var iconName: String {
