@@ -451,8 +451,11 @@ private struct SavedPlacesView: View {
                             await savePlace()
                         }
                     } label: {
-                        Label(source.saveTitle, systemImage: source.iconName)
-                            .frame(maxWidth: .infinity)
+                        HStack {
+                            Spacer()
+                            Label(source.saveTitle, systemImage: source.iconName)
+                            Spacer()
+                        }
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(isSaving || !canSave)
